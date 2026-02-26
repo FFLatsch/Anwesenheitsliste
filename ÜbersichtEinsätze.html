@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Feuerwehr – Alarmstufen Diagramme</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --text:#e8eefc;
+      --muted:#a9b6d6;
+      --line:rgba(255,255,255,.10);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+      --radius2: 12px;
+      --good:#34d399;
+      --warn:#fbbf24;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: var(--font);
+      background:
+        radial-gradient(1200px 800px at 10% 10%, rgba(94,234,212,.10), transparent 55%),
+        radial-gradient(900px 700px at 90% 20%, rgba(99,102,241,.12), transparent 60%),
+        var(--bg);
+      color: var(--text);
+    }
+    header{
+      padding: 18px 16px 8px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1{ margin:0 0 6px; font-size: 18px; letter-spacing:.2px; }
+    .sub{ color: var(--muted); font-size: 12px; line-height:1.35; }
+
+    .wrap{
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 10px 16px 28px;
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 980px){ .wrap{ grid-template-columns: 1fr; } }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .hd{
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap:wrap;
+    }
+    .hd b{ font-size: 13px; }
+    .bd{ padding: 12px; }
+
+    label{
+      display:block;
+      font-size: 11px;
+      color: var(--muted);
+      margin: 0 0 6px;
+    }
+    select{
+      width: 160px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      outline: none;
+    }
+    button{
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-size: 12px;
+      transition: .15s transform;
+    }
+    button:hover{ transform: translateY(-1px); }
+
+    .controls{
+      display:flex;
+      align-items:flex-end;
+      gap: 10px;
+      flex-wrap:wrap;
+    }
+
+    .kpi{
+      margin-top:10px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius2);
+      background: rgba(255,255,255,.02);
+    }
+    .kpi b{ font-size:12px; display:block; margin-bottom:6px; color: var(--muted); }
+    .kpi .val{ font-size: 22px; }
+
+    .hint{ margin-top: 8px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+
+    /* Canvas Wrapper: hält Verhältnis stabil */
+    .canvasWrap{
+      width:100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius2);
+      background: rgba(0,0,0,.10);
+      overflow:hidden;
+    }
+    .canvasWrap.bar{ aspect-ratio: 16 / 9; }
+    .canvasWrap.pie{ aspect-ratio: 1 / 1; } /* <- Kreis bleibt Kreis */
+    canvas{
+      display:block;
+      width:100%;
+      height:100%;
+    }
+
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
+
+    .legend{
+      margin-top:10px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .dot{
+      width:8px; height:8px; border-radius:999px; display:inline-block;
+      background: var(--good);
+    }
+    .dot.warn{ background: var(--warn); }
+
+    table{ width:100%; border-collapse: collapse; font-size: 12px; margin-top:10px; }
+    th, td{ padding: 8px 10px; border-bottom: 1px solid var(--line); }
+    th{ text-align:left; color: var(--muted); background: rgba(255,255,255,.02); position: sticky; top:0; }
+    td.num, th.num{ text-align:right; font-variant-numeric: tabular-nums; }
+
+    @media print{
+      body{ background:#fff; color:#111; }
+      .card{ box-shadow:none; }
+      button{ display:none !important; }
+      th{ position: static; }
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <h1>Alarmstufen – Verteilung & Gruppen</h1>
+  <div class="sub">
+    Auswertung nur aus Einträgen mit <b>Art = Einsatz</b>.<br>
+    Gruppen: <b>A1–A3 = Brandeinsätze</b>, <b>A4–A8 = Technische Einsätze</b> (ohne Alarmstufe separat).
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="card">
+    <div class="hd">
+      <b>Filter</b>
+      <div class="controls">
+        <div>
+          <label for="year">Jahr</label>
+          <select id="year"></select>
+        </div>
+        <button id="print">PDF / Drucken</button>
+      </div>
+    </div>
+    <div class="bd">
+      <div class="kpi">
+        <b>Einsätze im Jahr</b>
+        <div class="val" id="kpiEinsaetze">0</div>
+      </div>
+
+      <div class="kpi">
+        <b>Gruppen</b>
+        <div class="legend">
+          <span class="pill"><span class="dot"></span>Brandeinsätze (A1–A3): <b id="vBrand">0</b> (<span id="pBrand">0%</span>)</span>
+          <span class="pill"><span class="dot warn"></span>Technisch (A4–A8): <b id="vTech">0</b> (<span id="pTech">0%</span>)</span>
+          <span class="pill">ohne Alarm: <b id="vNone">0</b></span>
+        </div>
+      </div>
+
+      <div class="hint">
+        Prozentwerte beziehen sich auf Einsätze mit Alarmstufe A1–A8 (ohne Alarm wird nicht in % eingerechnet).
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="hd"><b>Diagramme</b></div>
+    <div class="bd">
+      <div class="grid2">
+        <div>
+          <b style="font-size:13px;">Balken: Einsätze nach Alarmstufe</b>
+          <div class="hint" style="margin-top:4px;">A1–A8 + „ohne“</div>
+          <div class="canvasWrap bar">
+            <canvas id="barChart"></canvas>
+          </div>
+          <div id="tableBox"></div>
+        </div>
+        <div>
+          <b style="font-size:13px;">Kreis: Brand vs. Technisch</b>
+          <div class="hint" style="margin-top:4px;">A1–A3 vs. A4–A8 (in %)</div>
+          <div class="canvasWrap pie">
+            <canvas id="pieChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  const LS_KEY = "fw_attendance_fixedseg_v3";
+  const LS_MEMBERS_KEY = "fw_members_v1";
+
+  function normalizeMemberName(name){
+    return String(name ?? "").trim().replace(/\s+/g, " ");
+  }
+
+  function loadMembers(){
+    try{
+      const raw = localStorage.getItem(LS_MEMBERS_KEY);
+      if(!raw) return [];
+      const arr = JSON.parse(raw);
+      if(!Array.isArray(arr)) return [];
+      const cleaned = arr.map(normalizeMemberName).filter(Boolean);
+      return Array.from(new Set(cleaned));
+    } catch {
+      return [];
+    }
+  }
+
+
+  const barCanvas = document.getElementById("barChart");
+  const pieCanvas = document.getElementById("pieChart");
+  const ctxBar = barCanvas.getContext("2d");
+  const ctxPie = pieCanvas.getContext("2d");
+
+  const selYear = document.getElementById("year");
+  const kpiE = document.getElementById("kpiEinsaetze");
+  const vBrand = document.getElementById("vBrand");
+  const vTech  = document.getElementById("vTech");
+  const vNone  = document.getElementById("vNone");
+  const pBrand = document.getElementById("pBrand");
+  const pTech  = document.getElementById("pTech");
+  const tableBox = document.getElementById("tableBox");
+
+  document.getElementById("print").addEventListener("click", () => window.print());
+
+  const data = load();
+  initYearOptions();
+  selYear.value = defaultYear();
+  selYear.addEventListener("change", render);
+
+  // resize canvases on layout changes
+  const ro = new ResizeObserver(() => render());
+  ro.observe(barCanvas.parentElement);
+  ro.observe(pieCanvas.parentElement);
+
+  render();
+
+  function render(){
+    const year = selYear.value;
+
+    const einsaetze = (data.entries || []).filter(e => {
+      return yearOf(e.date) === year && e.type === "Einsatz";
+    });
+
+    // Ø Anwesenheit je Alarmstufe (in %) über alle Einsätze der Stufe
+    // Basis: Mitgliederliste aus der Anwesenheitsliste (fw_members_v1)
+    const MEMBERS = loadMembers();
+    const possible = MEMBERS.length;
+    const attAgg = {
+      A1:{sum:0,n:0}, A2:{sum:0,n:0}, A3:{sum:0,n:0}, A4:{sum:0,n:0},
+      A5:{sum:0,n:0}, A6:{sum:0,n:0}, A7:{sum:0,n:0}, A8:{sum:0,n:0}
+    };
+
+    if(possible > 0){
+      einsaetze.forEach(e => {
+        const a = (e.alarm || "").trim();
+        if(!attAgg[a]) return;
+
+        const att = e.attendance || {};
+        let present = 0;
+        for(const m of MEMBERS){
+          if((att[m] ?? "") === "Anwesend") present += 1;
+        }
+
+        const pct = (present / possible) * 100;
+        attAgg[a].sum += pct;
+        attAgg[a].n += 1;
+      });
+    }
+
+    const avgByAlarm = {};
+    for(const a of Object.keys(attAgg)){
+      avgByAlarm[a] = attAgg[a].n ? Math.round(attAgg[a].sum / attAgg[a].n) : null;
+    }
+
+
+    const keys = ["A1","A2","A3","A4","A5","A6","A7","A8","—"];
+    const counts = Object.fromEntries(keys.map(k => [k, 0]));
+
+    einsaetze.forEach(e => {
+      const a = (e.alarm || "").trim();
+      if(counts[a] !== undefined) counts[a] += 1;
+      else counts["—"] += 1;
+    });
+
+    kpiE.textContent = String(einsaetze.length);
+
+    const brand = (counts.A1 + counts.A2 + counts.A3);
+    const tech  = (counts.A4 + counts.A5 + counts.A6 + counts.A7 + counts.A8);
+    const none  = counts["—"];
+
+    vBrand.textContent = String(brand);
+    vTech.textContent  = String(tech);
+    vNone.textContent  = String(none);
+
+    const denom = Math.max(brand + tech, 0);
+    const brandPct = denom ? Math.round((brand/denom)*100) : 0;
+    const techPct  = denom ? (100 - brandPct) : 0;
+    pBrand.textContent = brandPct + "%";
+    pTech.textContent  = techPct + "%";
+
+    // IMPORTANT: set proper internal resolution to avoid distortion
+    fitCanvasToBox(barCanvas);
+    fitCanvasToBox(pieCanvas);
+
+    drawBarChart(counts, keys);
+    drawPieChart(brand, tech);
+
+    renderCombinedTable(counts, keys, avgByAlarm);
+
+  }
+
+  function fitCanvasToBox(canvas){
+    const box = canvas.parentElement.getBoundingClientRect();
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const w = Math.max(1, Math.floor(box.width * dpr));
+    const h = Math.max(1, Math.floor(box.height * dpr));
+    if(canvas.width !== w || canvas.height !== h){
+      canvas.width = w;
+      canvas.height = h;
+    }
+  }
+
+  function drawBarChart(counts, keys){
+    const w = barCanvas.width, h = barCanvas.height;
+    ctxBar.clearRect(0,0,w,h);
+
+    // Prozentverteilung je Alarmstufe (inkl. ‚ohne‘) bezogen auf alle Einsätze im Jahr
+    const totalAll = keys.reduce((s,k) => s + (counts[k] || 0), 0);
+    const pctAll = Object.fromEntries(keys.map(k => [k, totalAll ? Math.round(((counts[k] || 0) / totalAll) * 100) : 0]));
+
+    const padL = Math.round(w*0.08), padR = Math.round(w*0.03), padT = Math.round(h*0.10), padB = Math.round(h*0.16);
+    const innerW = w - padL - padR;
+    const innerH = h - padT - padB;
+
+    const maxV = Math.max(...keys.map(k => counts[k]), 1);
+
+    ctxBar.strokeStyle = "rgba(255,255,255,.18)";
+    ctxBar.lineWidth = Math.max(1, Math.round(w*0.0015));
+
+    const steps = 5;
+    ctxBar.font = `${Math.max(12, Math.round(h*0.035))}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctxBar.fillStyle = "rgba(255,255,255,.75)";
+    ctxBar.textAlign = "left";
+
+    for(let i=0;i<=steps;i++){
+      const y = padT + (innerH * i/steps);
+      ctxBar.beginPath();
+      ctxBar.moveTo(padL, y);
+      ctxBar.lineTo(w-padR, y);
+      ctxBar.stroke();
+
+      const val = Math.round(maxV * (1 - i/steps));
+      ctxBar.fillText(String(val), Math.max(6, Math.round(w*0.01)), y + 6);
+    }
+
+    const n = keys.length;
+    const gap = innerW * 0.015;
+    const barW = (innerW - gap*(n-1)) / n;
+
+    ctxBar.textAlign = "center";
+
+keys.forEach((k, i) => {
+  const v = counts[k];
+  const bh = (v/maxV) * innerH;
+  const x = padL + i*(barW + gap);
+  const y = padT + (innerH - bh);
+
+  ctxBar.fillStyle = (k === "—") ? "rgba(251,191,36,.35)" : "rgba(52,211,153,.55)";
+  ctxBar.fillRect(x, y, barW, bh);
+
+  ctxBar.strokeStyle = "rgba(255,255,255,.18)";
+  ctxBar.strokeRect(x, y, barW, bh);
+
+  // ✅ Labels nur anzeigen, wenn v > 0
+  if (v > 0) {
+    const countFont = Math.max(12, Math.round(h*0.045));
+    const pctFont   = Math.max(11, Math.round(h*0.034));
+    const labelOff  = Math.max(10, Math.round(h*0.03));
+    let yCount = y - labelOff;
+    let yPct   = yCount + Math.round(pctFont*1.15);
+
+    // Wenn oben zu wenig Platz ist: Labels in den Balken setzen
+    if (yCount < padT + countFont) {
+      yCount = y + countFont + 4;
+      yPct   = yCount + Math.round(pctFont*1.15);
+    }
+
+    ctxBar.textBaseline = "alphabetic";
+    ctxBar.textAlign = "center";
+
+    ctxBar.fillStyle = "rgba(255,255,255,.92)";
+    ctxBar.font = `${countFont}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctxBar.fillText(String(v), x + barW/2, yCount);
+
+    ctxBar.fillStyle = "rgba(255,255,255,.75)";
+    ctxBar.font = `${pctFont}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctxBar.fillText(`${pctAll[k]}%`, x + barW/2, yPct);
+  }
+
+  // Kategorie (A1..A8 / ohne) bleibt immer sichtbar
+  ctxBar.fillStyle = "rgba(255,255,255,.75)";
+  ctxBar.font = `${Math.max(12, Math.round(h*0.04))}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+  ctxBar.fillText(k, x + barW/2, h - Math.max(16, Math.round(h*0.05)));
+});
+
+    ctxBar.textAlign = "left";
+  }
+
+  function drawPieChart(brand, tech){
+    const w = pieCanvas.width, h = pieCanvas.height;
+    ctxPie.clearRect(0,0,w,h);
+
+    // ensure circle: radius from MIN(w,h)
+    const cx = w/2, cy = h/2;
+    const r = Math.min(w,h) * 0.32;
+
+    const total = brand + tech;
+    const brandFrac = total ? brand/total : 0;
+    const techFrac  = total ? tech/total : 0;
+
+    let a0 = -Math.PI/2;
+
+    const a1 = a0 + brandFrac * Math.PI*2;
+    ctxPie.beginPath();
+    ctxPie.moveTo(cx, cy);
+    ctxPie.arc(cx, cy, r, a0, a1);
+    ctxPie.closePath();
+    ctxPie.fillStyle = "rgba(52,211,153,.60)";
+    ctxPie.fill();
+
+    const a2 = a1 + techFrac * Math.PI*2;
+    ctxPie.beginPath();
+    ctxPie.moveTo(cx, cy);
+    ctxPie.arc(cx, cy, r, a1, a2);
+    ctxPie.closePath();
+    ctxPie.fillStyle = "rgba(251,191,36,.55)";
+    ctxPie.fill();
+
+    ctxPie.strokeStyle = "rgba(255,255,255,.18)";
+    ctxPie.lineWidth = Math.max(2, Math.round(w*0.004));
+    ctxPie.beginPath();
+    ctxPie.arc(cx, cy, r, 0, Math.PI*2);
+    ctxPie.stroke();
+
+    // center text
+    ctxPie.textAlign = "center";
+    ctxPie.fillStyle = "rgba(255,255,255,.90)";
+    ctxPie.font = `${Math.max(16, Math.round(h*0.06))}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctxPie.fillText(total ? (Math.round(brandFrac*100) + "% / " + Math.round(techFrac*100) + "%") : "0%", cx, cy - Math.max(6, Math.round(h*0.02)));
+    ctxPie.fillStyle = "rgba(255,255,255,.70)";
+    ctxPie.font = `${Math.max(12, Math.round(h*0.04))}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctxPie.fillText("Brand / Technisch", cx, cy + Math.max(16, Math.round(h*0.04)));
+
+    // legend
+    const lx = Math.round(w*0.06), ly = Math.round(h*0.08);
+    ctxPie.textAlign = "left";
+    ctxPie.font = `${Math.max(12, Math.round(h*0.035))}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+
+    ctxPie.fillStyle = "rgba(52,211,153,.70)";
+    ctxPie.fillRect(lx, ly, 18, 18);
+    ctxPie.fillStyle = "rgba(255,255,255,.80)";
+    ctxPie.fillText(`Brandeinsätze (A1–A3): ${brand}`, lx + 28, ly + 14);
+
+    ctxPie.fillStyle = "rgba(251,191,36,.65)";
+    ctxPie.fillRect(lx, ly + 28, 18, 18);
+    ctxPie.fillStyle = "rgba(255,255,255,.80)";
+    ctxPie.fillText(`Technisch (A4–A8): ${tech}`, lx + 28, ly + 42);
+
+    if(total === 0){
+      ctxPie.fillStyle = "rgba(255,255,255,.65)";
+      ctxPie.fillText("Keine Einsätze mit Alarmstufe A1–A8 im Jahr.", lx, ly + 80);
+    }
+  }
+
+  function renderCombinedTable(counts, keys, avgByAlarm){
+    // % Anteil je Alarmstufe bezogen auf alle Einsätze im Jahr (inkl. „ohne“)
+    const totalAll = keys.reduce((s,k) => s + (counts[k] || 0), 0);
+    const pctAll = Object.fromEntries(keys.map(k => [k, totalAll ? Math.round(((counts[k] || 0) / totalAll) * 100) : 0]));
+
+    const rows = keys.map(k => {
+      const v = counts[k] || 0;
+      const pct = pctAll[k] ?? 0;
+      const aKey = (k === "—") ? null : k;
+      const avg = aKey ? (avgByAlarm[aKey] ?? null) : null;
+      return {
+        k,
+        v,
+        pct,
+        avg
+      };
+    });
+
+    tableBox.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Alarmstufe</th>
+            <th class="num">Einsätze</th>
+            <th class="num">Anteil</th>
+            <th class="num">Ø Anwesenheit</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>${r.k === "—" ? "<span style='color:var(--muted)'>ohne</span>" : r.k}</td>
+              <td class="num"><b>${r.v}</b></td>
+              <td class="num">${totalAll ? `${r.pct} %` : "–"}</td>
+              <td class="num">${(r.avg === null) ? "–" : `<b>${r.avg} %</b>`}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+      <div class="hint" style="margin-top:6px;">
+        Anteil = Verteilung der Einsätze je Alarmstufe im gewählten Jahr (inkl. „ohne“).<br>
+        Ø Anwesenheit = Durchschnitt von („Anwesend“ / Mitgliederliste) in % über alle Einsätze je Alarmstufe.
+      </div>
+    `;
+  }
+
+
+  function initYearOptions(){
+    const years = yearsFromEntries(data.entries || []);
+    const currentYear = String(new Date().getFullYear());
+    if(!years.includes(currentYear)) years.push(currentYear);
+    years.sort((a,b)=> b.localeCompare(a));
+    selYear.innerHTML = "";
+    years.forEach(y=>{
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      selYear.appendChild(opt);
+    });
+  }
+
+  function defaultYear(){
+    const years = yearsFromEntries(data.entries || []).sort((a,b)=> b.localeCompare(a));
+    const currentYear = String(new Date().getFullYear());
+    if(years.includes(currentYear)) return currentYear;
+    return years[0] || currentYear;
+  }
+
+  function yearsFromEntries(entries){
+    const set = new Set();
+    entries.forEach(e=>{ const y = yearOf(e.date); if(y) set.add(y); });
+    return Array.from(set);
+  }
+  function yearOf(dateStr){ return (!dateStr || dateStr.length < 4) ? "" : dateStr.slice(0,4); }
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      if(!raw) return { entries: [] };
+      const parsed = JSON.parse(raw);
+      if(!parsed.entries) parsed.entries = [];
+      return parsed;
+    } catch {
+      return { entries: [] };
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Feuerwehr – Übersicht pro Mitglied</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --text:#e8eefc;
+      --muted:#a9b6d6;
+      --line:rgba(255,255,255,.10);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+      --radius2: 12px;
+      --good:#34d399;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: var(--font);
+      background:
+        radial-gradient(1200px 800px at 10% 10%, rgba(94,234,212,.10), transparent 55%),
+        radial-gradient(900px 700px at 90% 20%, rgba(99,102,241,.12), transparent 60%),
+        var(--bg);
+      color: var(--text);
+    }
+    header{
+      padding: 18px 16px 8px;
+      max-width: 1400px; /* breiter für Monitor */
+      margin: 0 auto;
+    }
+    h1{ margin:0 0 6px; font-size: 18px; letter-spacing:.2px; }
+    .sub{ color: var(--muted); font-size: 12px; line-height:1.35; }
+
+    .wrap{
+      max-width: 1400px; /* breiter für Monitor */
+      margin: 0 auto;
+      padding: 10px 16px 28px;
+      display:grid;
+      gap: 12px;
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .hd{
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap:wrap;
+    }
+    .hd b{ font-size: 13px; }
+    .bd{ padding: 12px; }
+
+    .controls{
+      display:flex;
+      gap: 10px;
+      align-items:flex-end;
+      flex-wrap:wrap;
+    }
+    label{
+      display:block;
+      font-size: 11px;
+      color: var(--muted);
+      margin: 0 0 6px;
+    }
+    select{
+      width: 160px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      outline: none;
+    }
+    button{
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-size: 12px;
+      transition: .15s transform;
+    }
+    button:hover{ transform: translateY(-1px); }
+
+    /* mini bars */
+    .bars{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .barrow{
+      display:grid;
+      grid-template-columns: 90px 1fr 48px;
+      gap: 10px;
+      align-items:center;
+    }
+    .barrow .lbl{ color: var(--muted); font-size: 12px; }
+    .bar{
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--line);
+      overflow:hidden;
+    }
+    .bar > i{
+      display:block;
+      height:100%;
+      width:0%;
+      background: rgba(52, 211, 153, .55);
+    }
+    .barrow .val{
+      text-align:right;
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    /* 2 Tabellen nebeneinander (ab Monitorbreite) */
+    .tables2{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    @media (min-width: 1100px){
+      .tables2{
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    /* compact table */
+    .tablewrap{
+      overflow:auto;
+      border:1px solid var(--line);
+      border-radius: var(--radius2);
+      max-height: 70vh; /* damit es am Monitor ohne Endlosscroll besser wirkt */
+    }
+    table{
+      width:100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th, td{
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+    }
+    th{
+      text-align:left;
+      color: var(--muted);
+      font-weight: 600;
+      background: rgba(255,255,255,.02);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      white-space: nowrap;
+    }
+    td.num, th.num{
+      text-align:right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .name{
+      max-width: 340px;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .dot{ width:8px; height:8px; border-radius:999px; display:inline-block; background: var(--good); }
+
+    .hint{ margin-top: 8px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+
+    @media print{
+      body{ background:#fff; color:#111; }
+      .card{ box-shadow:none; }
+      th{ position: static; }
+      .hint, button{ display:none !important; }
+      .tablewrap{ max-height: none; }
+      .tables2{ grid-template-columns: 1fr 1fr; } /* beim Druck 2 Spalten erzwingen */
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Übersicht pro Mitglied</h1>
+  <div class="sub">
+    Kompakt: zählt nur <b>Anwesend</b> getrennt nach Übung/Einsatz/Prozession (Jahresfilter).<br>
+    Datenquelle: localStorage (wie Hauptseite).
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="card">
+    <div class="hd">
+      <b>Jahr & Gesamt-Balken</b>
+      <div class="controls">
+        <div>
+          <label for="year">Jahr</label>
+          <select id="year"></select>
+        </div>
+        <button id="print">PDF / Drucken</button>
+        <button id="excel">Excel Export (CSV)</button>
+      </div>
+    </div>
+    <div class="bd">
+      <div class="bars">
+        <div class="barrow">
+          <div class="lbl">Übungen</div>
+          <div class="bar"><i id="barU"></i></div>
+          <div class="val" id="valU">0</div>
+        </div>
+        <div class="barrow">
+          <div class="lbl">Einsätze</div>
+          <div class="bar"><i id="barE"></i></div>
+          <div class="val" id="valE">0</div>
+        </div>
+        <div class="barrow">
+          <div class="lbl">Prozession</div>
+          <div class="bar"><i id="barV"></i></div>
+          <div class="val" id="valV">0</div>
+        </div>
+      </div>
+
+      <div class="hint">
+        Balken zeigen die Anzahl der Einträge pro Art im gewählten Jahr (also „Möglichkeiten“).
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="hd">
+      <b>Mitglieder (Anwesend)</b>
+      <span class="pill"><span class="dot"></span>nur „Anwesend“</span>
+    </div>
+    <div class="bd">
+      <!-- Zwei Tabellen nebeneinander -->
+      <div class="tables2">
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="min-width:240px;">Mitglied</th>
+                <th class="num" style="min-width:70px;">Übung</th>
+                <th class="num" style="min-width:70px;">Einsatz</th>
+                <th class="num" style="min-width:90px;">Prozession</th>
+                <th class="num" style="min-width:70px;">Summe</th>
+              </tr>
+            </thead>
+            <tbody id="tbody1"></tbody>
+          </table>
+        </div>
+
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="min-width:240px;">Mitglied</th>
+                <th class="num" style="min-width:70px;">Übung</th>
+                <th class="num" style="min-width:70px;">Einsatz</th>
+                <th class="num" style="min-width:90px;">Prozession</th>
+                <th class="num" style="min-width:70px;">Summe</th>
+              </tr>
+            </thead>
+            <tbody id="tbody2"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="hint">
+        Sortierung: alphabetisch (A–Z). Wenn keine Einträge im Jahr vorhanden sind, sind alle Werte 0.
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  // MUSS identisch zum Hauptfile sein:
+  const LS_KEY = "fw_attendance_fixedseg_v3";
+
+  const MEMBERS_DEFAULT = [
+    "Auer Manuel","Auer Marc","Bachmann Markus","Bagolin Claudio","Doná Fabian","Egger Raffael",
+    "Fischböck Franz","Fischer Andreas","Fischer Philipp","Fleischmann Patrick","Forcher Simon",
+    "Fuchs Matthias","Gruber Jan","Gruber Reinhard","Janser Thomas","Kaserer Herbert","Kaserer Paul",
+    "Kupperion Kathrin","Kupperion Nadine","Lamprecht Maximilian","Linser Fabian","Linser Ulrich",
+    "Linser Werner","Mair Ulrich","Mantinger Alexander","Mantinger Simon","Mitterer Manuel",
+    "Nardelli Philipp","Oberhofer Anna","Oberhofer Paula","Patscheider Stefan","Pauli Theodor",
+    "Paulmichl Heiko","Pedross Patrick","Pegger Bernhart","Pegger Daniel","Pegger Martin",
+    "Pircher Manfred","Platzgummer Martin","Plörer Tanja","Pöhli Oliver","Pramstaller Werner",
+    "Prantner Markus","Prantner Maximilian","Rinner Christoph","Rinner Hansjörg","Ritter Paul",
+    "Rizzi Lukas","Schweitzer Peter Paul","Stecher Manfred","Tappeiner Johannes","Trafoier Norbert Franz",
+    "Tscholl Stefan","Weitgruber Andreas","Weitgruber Felix","Wellenzohn Alex","Wielander Alexander"
+  ];
+
+  const LS_MEMBERS_KEY = "fw_members_v1";
+
+  function normalizeMemberName(name){
+    return String(name ?? "").trim().replace(/\s+/g, " ");
+  }
+
+  function loadMembers(){
+    try{
+      const raw = localStorage.getItem(LS_MEMBERS_KEY);
+      if(raw){
+        const arr = JSON.parse(raw);
+        if(Array.isArray(arr) && arr.length){
+          const cleaned = Array.from(new Set(arr.map(normalizeMemberName).filter(Boolean)));
+          localStorage.setItem(LS_MEMBERS_KEY, JSON.stringify(cleaned));
+          return cleaned;
+        }
+      }
+    } catch {}
+    // Seed with default list if nothing stored yet
+    localStorage.setItem(LS_MEMBERS_KEY, JSON.stringify(MEMBERS_DEFAULT));
+    return [...MEMBERS_DEFAULT];
+  }
+
+  let MEMBERS = loadMembers();
+
+  const data = load();
+  const selYear = document.getElementById("year");
+  const tbody1 = document.getElementById("tbody1");
+  const tbody2 = document.getElementById("tbody2");
+
+  const barU = document.getElementById("barU");
+  const barE = document.getElementById("barE");
+  const barV = document.getElementById("barV");
+  const valU = document.getElementById("valU");
+  const valE = document.getElementById("valE");
+  const valV = document.getElementById("valV");
+
+  document.getElementById("print").addEventListener("click", () => window.print());
+  document.getElementById("excel").addEventListener("click", exportExcelCSV);
+
+  initYearOptions();
+  selYear.value = defaultYear();
+  selYear.addEventListener("change", render);
+
+  render();
+
+  function render(){
+    const year = selYear.value;
+
+    // falls Mitgliederliste zwischenzeitlich geändert wurde
+    MEMBERS = loadMembers();
+
+    const entriesYear = (data.entries || []).filter(e => yearOf(e.date) === year);
+
+    // Totals for mini bars (Möglichkeiten)
+    let uTot=0, eTot=0, vTot=0;
+    entriesYear.forEach(e=>{
+      if(e.type === "Übung") uTot++;
+      else if(e.type === "Einsatz") eTot++;
+      else if(e.type === "Prozession") vTot++;
+    });
+
+    const max = Math.max(uTot, eTot, vTot, 1);
+    barU.style.width = ((uTot/max)*100).toFixed(1) + "%";
+    barE.style.width = ((eTot/max)*100).toFixed(1) + "%";
+    barV.style.width = ((vTot/max)*100).toFixed(1) + "%";
+    valU.textContent = String(uTot);
+    valE.textContent = String(eTot);
+    valV.textContent = String(vTot);
+
+    // Per member counts (nur Anwesend)
+    const rows = buildRows(entriesYear);
+
+    // Split in 2 Tabellen (für Monitor)
+    const mid = Math.ceil(rows.length / 2);
+    const left = rows.slice(0, mid);
+    const right = rows.slice(mid);
+
+    tbody1.innerHTML = "";
+    tbody2.innerHTML = "";
+
+    left.forEach(r => addRow(tbody1, r));
+    right.forEach(r => addRow(tbody2, r));
+  }
+
+  function addRow(tbody, r){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="name" title="${escapeHtml(r.m)}"><b>${escapeHtml(r.m)}</b></td>
+      <td class="num">${r.u}</td>
+      <td class="num">${r.ei}</td>
+      <td class="num">${r.v}</td>
+      <td class="num"><b>${r.total}</b></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  function buildRows(entriesYear){
+    return MEMBERS.map(m=>{
+      let u=0, ei=0, v=0;
+      entriesYear.forEach(e=>{
+        const val = (e.attendance && (e.attendance[m] ?? "")) || "";
+        if(val !== "Anwesend") return;
+        if(e.type === "Übung") u++;
+        else if(e.type === "Einsatz") ei++;
+        else if(e.type === "Prozession") v++;
+      });
+      const total = u+ei+v;
+      return { m, u, ei, v, total };
+    }).sort((a,b)=> a.m.localeCompare(b.m, "de"));
+  }
+
+  // Excel-kompatibler Export als CSV (korrekt, ohne .xlsx Fehler)
+  function exportExcelCSV(){
+    const year = selYear.value;
+    const entriesYear = (data.entries || []).filter(e => yearOf(e.date) === year);
+    const rows = buildRows(entriesYear);
+
+    const header = ["Mitglied","Übung (Anwesend)","Einsatz (Anwesend)","Prozession (Anwesend)","Summe"];
+    const lines = [
+      header.map(csvCell).join(";"),
+      ...rows.map(r => [r.m, r.u, r.ei, r.v, r.total].map(csvCell).join(";"))
+    ].join("\n");
+
+    // BOM sorgt dafür, dass Excel Umlaute korrekt öffnet
+    const blob = new Blob(["\uFEFF" + lines], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Feuerwehr_Anwesenheit_${year}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function csvCell(v){
+    const s = String(v ?? "");
+    // CSV mit ; als Separator (DE Excel), Werte immer in Quotes
+    return `"${s.replaceAll('"','""')}"`;
+  }
+
+  function initYearOptions(){
+    const years = yearsFromEntries(data.entries || []);
+    const currentYear = String(new Date().getFullYear());
+    if(!years.includes(currentYear)) years.push(currentYear);
+    years.sort((a,b)=> b.localeCompare(a));
+    selYear.innerHTML = "";
+    years.forEach(y=>{
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      selYear.appendChild(opt);
+    });
+  }
+
+  function defaultYear(){
+    const years = yearsFromEntries(data.entries || []).sort((a,b)=> b.localeCompare(a));
+    const currentYear = String(new Date().getFullYear());
+    if(years.includes(currentYear)) return currentYear;
+    return years[0] || currentYear;
+  }
+
+  function yearsFromEntries(entries){
+    const set = new Set();
+    entries.forEach(e=>{ const y = yearOf(e.date); if(y) set.add(y); });
+    return Array.from(set);
+  }
+  function yearOf(dateStr){ return (!dateStr || dateStr.length < 4) ? "" : dateStr.slice(0,4); }
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      if(!raw) return { entries: [] };
+      const parsed = JSON.parse(raw);
+      if(!parsed.entries) parsed.entries = [];
+      return parsed;
+    } catch {
+      return { entries: [] };
+    }
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+</script>
+</body>
+</html>
