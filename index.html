@@ -74,7 +74,7 @@ function showTab(i) {
     const iframe = iframes[i];
 
     // Neu laden
-    const src = iframe.src;
+    const src = iframe.getAttribute("src");
     iframe.src = "";
     iframe.src = src;
 
@@ -84,7 +84,7 @@ function showTab(i) {
 
 function openWindow() {
     const active = document.querySelector("iframe.active");
-    window.open(active.src, "_blank");
+    window.open(active.getAttribute("src"), "_blank");
 }
 
 // Tastatur
